@@ -1,0 +1,2 @@
+# Scenario: stuck_valve — A valve fails to move when commanded.
+# TODO(siddharth): define schema (known graph facts vs. hidden truth) and fill in.

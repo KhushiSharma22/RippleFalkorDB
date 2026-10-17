@@ -1,0 +1,13 @@
+# FalkorDB: Redis protocol on 6379, FalkorDB Browser on 3000.
+# TODO(siddharth): verify image tag + ports against current FalkorDB docs; pin a version tag.
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    ports:
+      - "${FALKORDB_PORT:-6379}:6379"
+      - "3000:3000"
+    volumes:
+      - ./falkordb-data:/var/lib/falkordb/data
+    restart: unless-stopped
+
+  # backend / frontend services added later (Milestone 5).

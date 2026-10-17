@@ -1,0 +1,2 @@
+# Scenario: new_load — Topology change: an extra load is added (no code change).
+# TODO(siddharth): define schema (known graph facts vs. hidden truth) and fill in.
