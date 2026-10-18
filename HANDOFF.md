@@ -1,3 +1,22 @@
+# Current handoff — 2026-10-18
+
+M4 and the core M5 simulation demo are now implemented locally. The historical handoff below records the starting point and is superseded by this section.
+
+- Real GRAPH.COPY evaluation with branch-local predicted evidence and cleanup; bounded retry for Redis copy contention.
+- Candidate generation reads graph actions and topology. Persisted decision trace supplies explanations.
+- Six scenarios and three policy variants; new_load changes the decision without planner code changes.
+- FastAPI/WebSocket backend and React facility/dependency dashboard, plan comparisons, replay, JSON export, and stale-evidence labels.
+- Dedicated Cyberwave scene in https://cyberwave.com/s-team-9/envs/graph-hacks; healthy_5 SDK run verified recovery with seven inspections and no verification failures.
+- Setup is in README.md. Narration, expected outcomes and boundaries are in docs/demo-script.md. Evaluation evidence is in eval/results/.
+
+The key belongs in backend/.env (gitignored); never commit it. The setup script records workspace, environment and twin IDs there. Prefer scripts.setup_cyberwave and scripts.run_demo over the historical proof scripts, which reference the original collaborator's environment.
+
+Remaining: LLM/MCP layer, physical locomotion/manipulation, perception-derived sensing, automatic replanning after failed actuation, production concurrency guarantees, and demo-video recording. Cyberwave is verified repositioning; facility dynamics and sensor values are synthetic. No cloud physics instance was started for this demo.
+
+---
+
+## Historical handoff (before this implementation)
+
 # Ripple: handoff
 
 Status as of 17 Oct 2026. For anyone picking up the project.

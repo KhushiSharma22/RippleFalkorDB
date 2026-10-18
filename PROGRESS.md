@@ -56,3 +56,7 @@
   decision-driven inspection loop, hop-by-hop routing via `algo.SPpaths`, `stale_evidence`, `stale_valve` + `stuck_valve` scenarios.
 - **Tested:** `uv run pytest` → 35 passed.
 - **Next:** M4 — GRAPH.COPY branch per candidate plan, Decision provenance, explanations from `decision_trace`.
+
+
+## 2026-10-18 — M4 and simulation demo
+Implemented graph copies, graph-driven candidate generation, persisted explanations, six-scenario evaluation, dashboard and Cyberwave scene. Initial expanded regression: 43 tests passed. Cyberwave healthy_5: recovered, seven inspections, zero verification failures. See docs/demo-script.md for the script and remaining proposal gaps. Changes remain local.
