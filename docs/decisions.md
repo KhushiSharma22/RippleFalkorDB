@@ -60,3 +60,13 @@
   Dev/tests/eval on `MockRobotAdapter`; Cyberwave adapter for demo visualization.
 - **Why:** deterministic, no MQTT/sim dependency, no sim credits; same `RobotAdapter` interface, so
   swapping in real locomotion later changes only `move_to`.
+
+## D-008 — Graph model v1 (`docs/graph-model.md`): DP1–DP5 accepted by Siddharth
+- DP1 state only as Observations · DP2 FEEDS + CONNECTED_TO both · DP3 InspectionPoint own label ·
+  DP4 `(:Robot)-[:AT]->(:Location)` moved on verified arrival · DP5 branches write `source:"predicted"` Observations.
+- **Status:** drafted by Claude; Siddharth reviewed and agreed with all five on 2026-10-17. Rationale per DP is in the graph-model.md table.
+
+## D-009 — Run dev scripts as modules (`uv run python -m scripts.<name>`)
+- **Context:** `.venv` lives under iCloud-synced `~/Documents`; macOS flags `_editable_impl_ripple.pth` as hidden and
+  Python skips hidden `.pth` files, so `python scripts/x.py` can't import `ripple`.
+- **Decision:** invoke scripts with `-m` from `backend/` (adds cwd to `sys.path`). Alternative: move repo out of iCloud.

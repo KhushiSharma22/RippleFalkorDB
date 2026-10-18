@@ -16,3 +16,5 @@ UI components, evaluation) is written by Siddharth.
 | 2026-10-17 | `backend/scripts/list_assets.py`; proof-script edits (UUID lookup, nudge, twin reuse) | snippet (debugging, SDK source read by AI) | Typed + ran; observed robot in browser. |
 | 2026-10-17 | `backend/scripts/list_twins.py` | snippet (diagnostic) | Typed + ran; compared twin IDs with browser. |
 | 2026-10-17 | `backend/scripts/cyberwave_reposition_proof.py`; `affect("sim")` edits | fuller snippet (proof script; SDK source traced by AI) | Typed + ran; proof passed; supplied environment id; tested keyboard teleop in browser. |
+| 2026-10-17 | `robot/base.py` (Pose, RobotAdapter, arrived), `robot/mock_adapter.py`, `tests/unit/test_robot_adapter.py` | AI-written (`write it: step 0.3`) | Designed/approved interface (command vs. verified arrival, coords from graph, teleport mock with failure injection); reviewing. |
+| 2026-10-17 | `docs/graph-model.md` v1, `docs/graph-model-preview.cypher`, `backend/scripts/load_model_preview.py` | AI-written (on request; scoped down: Siddharth decides DP1–DP5) | Validating in FalkorDB Browser; answering decision points. |

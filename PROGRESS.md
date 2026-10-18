@@ -1,7 +1,7 @@
 # Progress
 
 ## Current step
-**0.3 — RobotAdapter Protocol + MockRobotAdapter.**
+**Milestone 1 — vertical slice** (Milestone 0 complete).
 
 ## Log
 
@@ -29,4 +29,11 @@
   Scripts: `backend/scripts/cyberwave_proof.py`, `list_assets.py`. Action: ask Cyberwave team.
 - **0.2 DONE:** reposition proof passes (D-007): before (0,0) → after (1.5,-0.5) via independent REST readback.
   Locomotion unresolved (D-006) — question for Cyberwave team.
-- **Next:** 0.3 RobotAdapter Protocol + MockRobotAdapter.
+- **0.3 DONE (AI-written on request):** `robot/base.py` (`Pose`, `RobotAdapter` Protocol, `arrived`),
+  `robot/mock_adapter.py` (teleport + `fail_next_moves`), `tests/unit/test_robot_adapter.py` (5 tests).
+- **Tested:** `uv run pytest` → 6 passed, 2 skipped (architecture stubs); ruff clean.
+- **Open:** `CyberwaveRobotAdapter` (edit_position per D-007) not yet written; explain-back for 0.1/0.2 owed.
+- **0.4 drafted:** `docs/graph-model.md` v1 + `docs/graph-model-preview.cypher` + `scripts/load_model_preview.py`
+  (27 nodes / 51 rels in `model_preview`; impact + robot-location queries return expected rows).
+- **0.4 DONE:** DP1–DP5 accepted (D-008).
+- **Next:** Milestone 1 vertical slice.
