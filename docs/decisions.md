@@ -99,3 +99,37 @@
 - **Scenarios:** `extends:` lets `standby_down` / `healthy_5` reuse the healthy_8 graph and change only `truth:`,
   so differences in behaviour come from observations, not topology or code.
 - **Freshness windows (synthetic):** position/running 120 s, flow/temperature 60 s, health/capacity 600 s.
+
+## D-013 — Milestone 2: connected consequences + capacity
+- **Candidate plans (preference order):** `isolate_primary_now` (the obvious local fix) → `restore_via_standby`
+  → `reduce_load_then_restore` → `shed_noncritical_load` (approved degraded operation). Still a fixed list (D-012).
+- **Impact trace (multi-hop):** `upstream_assets`, `alternate_supplies` (exclude may be null), `downstream_machines`,
+  `critical_services_affected`. Result records shared machines and critical services at incident start.
+- **Capacity check (`planning/capacity.py`, condition `c_capacity_ok`):** a supply path contributes only if
+  supply health = ok, running = true, every valve on the path open, and *observed* capacity known (fresh or
+  predicted). Demand = machines believed running; **no evidence ⇒ assume running (conservative)**.
+  Decision-driven: a known-false gate zeroes the path without inspection; known ≥ demand ⇒ ok; known + nominal
+  upper bound < demand ⇒ violation without inspection; otherwise request the missing evidence.
+- **Violation text names the critical services cut** (from `critical_services_affected`), so "isolate primary now"
+  is rejected *because* it would cut `line_a`.
+- **Plan validation with predictions:** `validate_plan` passes each step the declared effects of earlier steps
+  (`transition_model.with_effects`), labelled `predicted`. M4 swaps this overlay for GRAPH.COPY branches (DP5).
+- **New prerequisite:** `isolate_primary REQUIRES c_primary_failed` (don't isolate a healthy supply).
+- **Service verification:** after execution, the header's observed flow must cover running machines' demand;
+  `standby_down` therefore ends **not recovered** (machine A unserved), i.e. degraded, reported honestly.
+
+## D-014 — Milestone 3: evidence-driven planning
+- **Hypotheses:** scenario defines `HypothesisTemplate` nodes with `EXPECTS {property, op, value}` and
+  `DISTINGUISHED_BY`; `instantiate_hypotheses` copies them per incident. Diagnosis-phase observations are
+  classified (match ⇒ `SUPPORTS`, mismatch ⇒ `CONTRADICTS` + status `rejected`). Evidence, not causation.
+  Only diagnosis observations are classified (post-intervention state would otherwise "support" wrong hypotheses).
+- **Decision relevance score** (`planning/inspection_ranker.py`): `3·blocks + 1·critical + 0.5·hypotheses − 0.05·travel`
+  where blocks = undecided preferred plans waiting on that point's evidence. Transparent heuristic, not information gain.
+- **Inspection policy:** inspect only while a *more-preferred* plan is undecided; travel only to the top-scoring
+  point and only if blocks > 0; re-evaluate all plans after every inspection. Plans whose missing evidence no
+  reachable point can provide are rejected as "evidence unobtainable".
+- **Routing:** `route_to_inspection_point` uses FalkorDB `algo.SPpaths` (weighted by `ADJACENT_TO.cost`,
+  undirected); the robot moves hop by hop and the `AT` edge moves only after each verified hop.
+- **Stale evidence:** `stale_evidence` lists decision-relevant facts that are missing or older than their window
+  (windows passed from `freshness.py`); `stale_valve` scenario proves an hour-old "bypass open" log is not trusted.
+- **Scenario loader:** `extra_observations` lets a scenario add prior evidence while inheriting the base graph.

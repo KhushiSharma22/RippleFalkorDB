@@ -1,6 +1,6 @@
 # Judge prep: questions and model answers
 
-> Study sheet, not submission material. Model answers drafted by Claude; rehearse them in your own words.
+> Study sheet, not submission material. Rehearse the answers in your own words.
 > Grows with each step. References point to `docs/decisions.md` (D-xxx) and `docs/graph-model.md` (DPx).
 
 ## Milestone 0: foundations
@@ -71,3 +71,37 @@ A: DP1: state lives only in Observations. The query takes the newest Observation
 
 **Q: Your candidate plans are a hardcoded list. Isn't that the opposite of graph-driven?**
 A: For M1, yes, and we say so (D-012). M1 proves one thing: evidence changes the action. Everything the decision *depends on* already comes from the graph: prerequisites, inspection locations, coordinates, robot position, effects. Graph-driven candidates, multi-hop impact and `GRAPH.COPY` branch evaluation replace the list in M2–M4.
+
+## Milestone 2: connected consequences
+
+**Q: Why is "isolate the primary" rejected when the primary has clearly failed?**
+A: Because the graph shows what else depends on it. The capacity check (`c_capacity_ok` on `isolate_primary`) asks: *after* this action, can the remaining supply paths into `cooling_header` cover the running machines' demand? Paths come from `alternate_supplies`, demand from `downstream_machines`. With the standby not running, available = 0 < demand 7, and `critical_services_affected` names `line_a` (machine A). So it's rejected with "would cut critical service line_a".
+
+**Q: A path exists from the standby to machine A. Why isn't that enough?**
+A: Reachability isn't sufficiency (DP2). A path contributes only if the supply is healthy and running, every valve on it is open, and its *observed* capacity is known. In healthy_5 the path exists but carries 5 < 7, so Ripple sheds machine B first (`reduce_load_then_restore`).
+
+**Q: Where does the capacity math run: database or Python?**
+A: Topology and evidence come from FalkorDB queries. The arithmetic (sum capacity, compare demand) runs in `planning/capacity.py`. The graph says *what is connected and what we know*; the planner decides *whether it's enough*. No topology is cached in Python.
+
+**Q: Why "assume running" for machines with no evidence?**
+A: It's conservative: assuming more demand can only make Ripple more cautious, never less. And once B is shed, the verified observation (running = false) removes its demand.
+
+## Milestone 3: evidence-driven planning
+
+**Q: How does the robot decide what to inspect?**
+A: Each round, Ripple validates every candidate plan. Plans that are still undecided (missing or stale evidence) and more preferred than the first feasible fallback define what matters. Each reachable inspection point gets a **decision relevance score**: 3 × plans it unblocks + 1 × critical services downstream of what it observes + 0.5 × hypotheses it distinguishes − 0.05 × route cost. The robot goes to the top point, but only if it unblocks at least one plan. Then everything is re-evaluated.
+
+**Q: Show me an inspection it chose *not* to do.**
+A: `ip_main_valve` distinguishes two fault hypotheses, but no candidate plan depends on it (`blocks = []`), so the robot never travels there for diagnosis (test `test_robot_only_travels_for_decision_relevant_inspections`). Likewise `ip_bypass_valve` is never needed: once the standby is seen not running, "isolate now" is already rejected.
+
+**Q: Is that information gain?**
+A: No, and we don't call it that. It's a transparent, explainable heuristic, a "decision relevance score". There's no probability model behind it.
+
+**Q: What do hypotheses actually do?**
+A: Each incident gets hypotheses from templates (primary failure, valve wrongly closed, faulty temperature reading), each with `EXPECTS` patterns and `DISTINGUISHED_BY` inspection points. Diagnosis observations create `SUPPORTS` or `CONTRADICTS` edges with the rule that fired; contradicted hypotheses are rejected. In healthy_8, "primary health = failed" supports primary failure and rejects "faulty temperature reading". They also feed the relevance score. `SUPPORTS` is evidence, not causation.
+
+**Q: How is the route computed?**
+A: FalkorDB's built-in `algo.SPpaths` finds the cheapest path over `ADJACENT_TO` weighted by `cost`. The robot moves hop by hop, and the `AT` edge updates only after each hop is verified by pose readback.
+
+**Q: How do you prove stale data isn't trusted?**
+A: `stale_valve` seeds an hour-old log saying the bypass is open (it's actually closed). The bypass position window is 120 s, so `check_action` reports it as `stale (log)` and missing, and `stale_evidence` lists it at incident start with `last_seen = -3600`. Ripple never acts on it.

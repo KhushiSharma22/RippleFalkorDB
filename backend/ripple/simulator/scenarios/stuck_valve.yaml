@@ -1,2 +1,7 @@
-# Scenario: stuck_valve — A valve fails to move when commanded.
-# TODO(siddharth): define schema (known graph facts vs. hidden truth) and fill in.
+# Scenario: stuck_valve — the bypass valve acknowledges commands but does not move.
+# Tests predicted != observed: the ack is not success; verification must catch it.
+name: stuck_valve
+description: Bypass valve stuck closed (commands acked, no movement).
+extends: healthy_8
+truth:
+  bypass: {stuck: true}

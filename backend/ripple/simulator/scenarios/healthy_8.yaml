@@ -1,4 +1,5 @@
 # Scenario: healthy_8 — primary supply fails; standby is healthy with 8 units (both machines can stay up).
+# Base scenario: other scenarios `extends: healthy_8` and override only `truth:` (or add observations).
 # Numbers are synthetic simulation assumptions (docs/proposal.md §3).
 #
 # graph:  what Ripple is ALLOWED to know. Seeded into FalkorDB by ripple.graph.seed.
@@ -34,6 +35,8 @@ graph:
     - {labels: [InspectionPoint], id: ip_bypass_valve, name: Bypass valve indicator}
     - {labels: [InspectionPoint], id: ip_header_flow, name: Header flow meter}
     - {labels: [InspectionPoint], id: ip_machine_b, name: Machine B status panel}
+    - {labels: [InspectionPoint], id: ip_primary_pump, name: Primary pump gauge}
+    - {labels: [InspectionPoint], id: ip_main_valve, name: Main isolation valve indicator}
     - {labels: [Sensor], id: temp_a, kind: temperature}
     - {labels: [Robot], id: robot_1, name: Inspector}
 
@@ -45,6 +48,12 @@ graph:
     - {labels: [Condition], id: c_standby_healthy, property: health, op: "=", value: ok, kind: evidence}
     - {labels: [Condition], id: c_bypass_open, property: position, op: "=", value: open, kind: evidence}
     - {labels: [Condition], id: c_capacity_ok, kind: computed, check: demand_within_capacity}
+    - {labels: [Condition], id: c_primary_failed, property: health, op: "=", value: failed, kind: evidence}
+
+    # --- fault hypotheses (templates; instantiated per incident). SUPPORTS is evidence, not causation.
+    - {labels: [HypothesisTemplate], id: hyp_primary_failure, name: Primary supply failure}
+    - {labels: [HypothesisTemplate], id: hyp_wrong_valve_state, name: Main isolation valve wrongly closed}
+    - {labels: [HypothesisTemplate], id: hyp_faulty_temperature, name: Faulty temperature reading (supply fine)}
 
   relationships:
     # --- robot access
@@ -81,6 +90,8 @@ graph:
     - {type: LOCATED_IN, from: ip_bypass_valve, to: standby_bay}
     - {type: LOCATED_IN, from: ip_header_flow, to: header_room}
     - {type: LOCATED_IN, from: ip_machine_b, to: machine_hall}
+    - {type: LOCATED_IN, from: ip_primary_pump, to: primary_bay}
+    - {type: LOCATED_IN, from: ip_main_valve, to: primary_bay}
     - {type: LOCATED_IN, from: temp_a, to: machine_hall}
 
     # --- services, inspection coverage, sensing
@@ -90,6 +101,8 @@ graph:
     - {type: INSPECTS, from: ip_standby_pump, to: standby_supply, property: capacity}
     - {type: INSPECTS, from: ip_standby_pump, to: standby_supply, property: running}
     - {type: INSPECTS, from: ip_machine_b, to: machine_b, property: running}
+    - {type: INSPECTS, from: ip_primary_pump, to: primary_supply, property: health}
+    - {type: INSPECTS, from: ip_main_valve, to: main_isolation, property: position}
     - {type: INSPECTS, from: ip_bypass_valve, to: bypass, property: position}
     - {type: INSPECTS, from: ip_header_flow, to: cooling_header, property: flow}
     - {type: MEASURES, from: temp_a, to: machine_a, property: temperature}
@@ -101,10 +114,22 @@ graph:
     - {type: CONDITION_ON, from: c_bypass_open, to: bypass}
     - {type: REQUIRES, from: isolate_primary, to: c_capacity_ok}
     - {type: CONDITION_ON, from: c_capacity_ok, to: cooling_header}
+    - {type: REQUIRES, from: isolate_primary, to: c_primary_failed}
+    - {type: CONDITION_ON, from: c_primary_failed, to: primary_supply}
     - {type: AFFECTS, from: activate_standby, to: standby_supply, property: running, value: true}
     - {type: AFFECTS, from: open_bypass, to: bypass, property: position, value: open}
     - {type: AFFECTS, from: isolate_primary, to: main_isolation, property: position, value: closed}
     - {type: AFFECTS, from: shed_load_b, to: machine_b, property: running, value: false}
+
+    # --- hypothesis templates: expected observation patterns + inspections that distinguish them
+    - {type: EXPECTS, from: hyp_primary_failure, to: primary_supply, property: health, op: "=", value: failed}
+    - {type: EXPECTS, from: hyp_wrong_valve_state, to: main_isolation, property: position, op: "=", value: closed}
+    - {type: EXPECTS, from: hyp_faulty_temperature, to: primary_supply, property: health, op: "=", value: ok}
+    - {type: EXPECTS, from: hyp_faulty_temperature, to: main_isolation, property: position, op: "=", value: open}
+    - {type: DISTINGUISHED_BY, from: hyp_primary_failure, to: ip_primary_pump}
+    - {type: DISTINGUISHED_BY, from: hyp_wrong_valve_state, to: ip_main_valve}
+    - {type: DISTINGUISHED_BY, from: hyp_faulty_temperature, to: ip_primary_pump}
+    - {type: DISTINGUISHED_BY, from: hyp_faulty_temperature, to: ip_main_valve}
 
   # Prior evidence known before the incident (seeded via repository.insert_observation).
   observations:

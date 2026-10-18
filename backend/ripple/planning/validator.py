@@ -1,74 +1,93 @@
-"""Hard-constraint checks: prerequisites, evidence freshness, state-revision consistency.
+"""Hard-constraint checks: prerequisites, evidence freshness, capacity.
 
 Deterministic; has final say over the LLM. Prerequisites come from the graph
-(actions/action_prerequisites); current beliefs come from the latest Observation per
-(asset, property), and only fresh ones count.
+(actions/action_prerequisites); beliefs come from the latest fresh Observation per
+(asset, property), or from a planning prediction for effects of earlier plan steps.
+
+Outcome per action/plan:
+- violations: fresh (or predicted) facts break a condition -> hard reject
+- missing:    evidence absent or stale -> the robot could inspect it
 """
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from falkordb import Graph
 
-from ripple.evidence.freshness import is_fresh
+from ripple.evidence.beliefs import Predicted, belief, compare
 from ripple.graph import repository
+from ripple.planning import capacity
+from ripple.planning.transition_model import with_effects
 
 
 @dataclass
 class ValidationResult:
-    ok: bool
-    reasons: list[str] = field(default_factory=list)
-    missing: list[tuple[str, str]] = field(default_factory=list)  # (asset_id, property) to inspect
+    violations: list[str] = field(default_factory=list)
+    missing: list[tuple[str, str]] = field(default_factory=list)  # (asset_id, property)
+    notes: list[str] = field(default_factory=list)  # why each missing item is needed
+
+    @property
+    def ok(self) -> bool:
+        return not self.violations and not self.missing
+
+    @property
+    def rejected(self) -> bool:
+        return bool(self.violations)
+
+    @property
+    def reasons(self) -> list[str]:
+        return self.violations + self.notes
+
+    def merge(self, other: "ValidationResult", prefix: str = "") -> None:
+        self.violations += [prefix + v for v in other.violations]
+        self.notes += [prefix + n for n in other.notes]
+        self.missing += [m for m in other.missing if m not in self.missing]
 
 
-def compare(op: str, observed: Any, expected: Any) -> bool:
-    """Evaluate `observed <op> expected`; numeric ops coerce to float."""
-    if op == "=":
-        if isinstance(observed, (int, float)) and isinstance(expected, (int, float)):
-            return float(observed) == float(expected)
-        return observed == expected
-    numeric = {"<": float.__lt__, "<=": float.__le__, ">": float.__gt__, ">=": float.__ge__}
-    if op not in numeric:
-        raise ValueError(f"Unsupported condition op {op!r}")
-    return numeric[op](float(observed), float(expected))
-
-
-def check_action(graph: Graph, action_id: str, now: float) -> ValidationResult:
-    """Check every prerequisite of `action_id` against fresh evidence.
-
-    Missing or stale evidence is reported in `missing` (so the robot can inspect it);
-    a fresh observation that violates a condition is a hard rejection.
-    """
-    reasons: list[str] = []
-    missing: list[tuple[str, str]] = []
+def check_action(
+    graph: Graph, action_id: str, now: float, predicted: Predicted | None = None
+) -> ValidationResult:
+    """Check every prerequisite of `action_id` against fresh evidence (+ optional predictions)."""
+    result = ValidationResult()
     for c in repository.action_prerequisites(graph, action_id):
+        cid, asset_id = c["condition_id"], c["asset_id"]
         if c["kind"] == "computed":
-            reasons.append(
-                f"{c['condition_id']}: computed check {c['check']!r} not implemented (Milestone 2)"
-            )
+            if c["check"] != "demand_within_capacity":
+                result.violations.append(f"{cid}: unknown computed check {c['check']!r}")
+                continue
+            cap = capacity.demand_within_capacity(graph, asset_id, now, action_id, predicted)
+            result.violations += [f"{cid}: {v}" for v in cap.violations]
+            for item in cap.missing:
+                if item not in result.missing:
+                    result.missing.append(item)
+            if cap.missing:
+                result.notes.append(f"{cid}: capacity undetermined, need {cap.missing}")
             continue
-        latest = repository.latest_observation(graph, c["asset_id"], c["property"])
-        target = f"{c['asset_id']}.{c['property']}"
-        if latest is None:
-            missing.append((c["asset_id"], c["property"]))
-            reasons.append(f"{c['condition_id']}: no evidence for {target}")
-        elif not is_fresh(c["property"], latest["observed_at"], now):
-            missing.append((c["asset_id"], c["property"]))
-            reasons.append(
-                f"{c['condition_id']}: evidence for {target} is stale ({latest['source']})"
-            )
-        elif not compare(c["op"], latest["value"], c["value"]):
-            reasons.append(
-                f"{c['condition_id']}: {target} = {latest['value']!r}, required {c['op']} {c['value']!r}"
-            )
-    return ValidationResult(ok=not reasons, reasons=reasons, missing=missing)
+
+        b = belief(graph, asset_id, c["property"], now, predicted)
+        target = f"{asset_id}.{c['property']}"
+        if b.usable:
+            if not compare(c["op"], b.value, c["value"]):
+                result.violations.append(
+                    f"{cid}: {target} = {b.value!r} ({b.status}), required {c['op']} {c['value']!r}"
+                )
+        else:
+            if (asset_id, c["property"]) not in result.missing:
+                result.missing.append((asset_id, c["property"]))
+            why = "no evidence" if b.status == "missing" else f"evidence is stale ({b.source})"
+            result.notes.append(f"{cid}: {why} for {target}")
+    return result
 
 
-def validate_plan(graph: Graph, plan: list[Any], now: float) -> ValidationResult:
-    """Reject plans violating prerequisites or relying on stale evidence (Milestone 3/4)."""
-    raise NotImplementedError("TODO(siddharth): plan validation")
+def validate_plan(graph: Graph, actions: list[str], now: float) -> ValidationResult:
+    """Validate a sequence: each step sees the predicted effects of the steps before it."""
+    result = ValidationResult()
+    predicted: Predicted = {}
+    for action_id in actions:
+        result.merge(check_action(graph, action_id, now, predicted), prefix=f"{action_id} -> ")
+        predicted = with_effects(graph, action_id, predicted)
+    return result
 
 
-def recheck_before_action(graph: Graph, step: Any, expected_revision: int) -> ValidationResult:
-    """Re-validate a step against the latest StateRevision immediately before executing (Milestone 3)."""
-    raise NotImplementedError("TODO(siddharth): pre-action recheck")
+def recheck_before_action(graph: Graph, action_id: str, now: float) -> ValidationResult:
+    """Re-validate one action against real evidence only, right before executing it (invariant #4)."""
+    return check_action(graph, action_id, now)

@@ -34,6 +34,7 @@ NODE_LABELS: set[tuple[str, ...]] = {
     ("Robot",),
     ("Action",),
     ("Condition",),
+    ("HypothesisTemplate",),
 }
 REL_TYPES: set[str] = {
     "ADJACENT_TO",
@@ -47,6 +48,8 @@ REL_TYPES: set[str] = {
     "REQUIRES",
     "CONDITION_ON",
     "AFFECTS",
+    "EXPECTS",
+    "DISTINGUISHED_BY",
 }
 
 

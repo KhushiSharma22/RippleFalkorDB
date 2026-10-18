@@ -1,7 +1,7 @@
 # Progress
 
 ## Current step
-**Milestone 1 — vertical slice: code complete; Siddharth pastes 12 queries, then tests go green.**
+**Milestone 4 — hypothetical branches + explanations** (Milestones 2–3 complete; see HANDOFF.md).
 
 ## Log
 
@@ -44,3 +44,15 @@
   validator `check_action`, orchestrator vertical slice, architecture tests, scenario tests (D-012).
 - **Tested:** with the completed queries (verification overlay) → 24 passed. In-repo `.cypher` bodies pending.
 - **Next:** paste queries → `uv run pytest` green → Milestone 2 (impact queries, capacity check).
+- **M1 DONE:** all queries pasted; `uv run pytest` → 24 passed. M2–M4 queries pasted (not yet wired).
+- **Housekeeping:** AI_USAGE.md removed at Siddharth's request; README carries a one-line AI disclosure. HANDOFF.md added for collaborators.
+- **Next:** M2 — wire impact queries, implement `planning/capacity.py`, reject "isolate primary now".
+
+### 2026-10-17 — Milestones 2 & 3
+- **M2 DONE (D-013):** impact queries wired; `planning/capacity.py`; 4 candidate plans; "isolate primary now"
+  rejected with "available 0 < demand 7 … would cut critical service line_a"; healthy_5 → reduce load then restore;
+  service verification by observed header flow (standby_down = degraded, not recovered).
+- **M3 DONE (D-014):** hypotheses (templates → per-incident, SUPPORTS/CONTRADICTS), decision relevance score,
+  decision-driven inspection loop, hop-by-hop routing via `algo.SPpaths`, `stale_evidence`, `stale_valve` + `stuck_valve` scenarios.
+- **Tested:** `uv run pytest` → 35 passed.
+- **Next:** M4 — GRAPH.COPY branch per candidate plan, Decision provenance, explanations from `decision_trace`.

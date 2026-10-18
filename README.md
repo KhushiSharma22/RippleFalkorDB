@@ -27,4 +27,4 @@ See [docs/architecture.md](docs/architecture.md).
 TODO(siddharth)
 
 ## AI assistance disclosure
-AI assistant use is logged in [AI_USAGE.md](AI_USAGE.md).
+Built with Claude Code (Anthropic) as a coding assistant; design decisions are recorded in [docs/decisions.md](docs/decisions.md).

@@ -54,9 +54,12 @@ def inspection_points_for(graph: Graph, asset_id: str, prop: str) -> list[Row]:
     return _run(graph, "evidence/inspection_points_for", params, write=False)
 
 
-def stale_evidence(graph: Graph, incident_id: str, now: float) -> list[Row]:
-    """Decision-relevant evidence older than its freshness window. Query: evidence/stale_evidence."""
-    raise NotImplementedError("TODO(siddharth): stale_evidence (Milestone 3)")
+def stale_evidence(
+    graph: Graph, now: float, windows: dict[str, float], default_window: float
+) -> list[Row]:
+    """Decision-relevant (asset, property) pairs that are missing or older than their window."""
+    params = {"now": now, "windows": windows, "default_window": default_window}
+    return _run(graph, "evidence/stale_evidence", params, write=False)
 
 
 # --- actions --------------------------------------------------------------------
@@ -131,35 +134,78 @@ def inspection_targets(graph: Graph, robot_id: str, ip_id: str) -> list[Row]:
 
 
 def route_to_inspection_point(graph: Graph, robot_id: str, inspection_point_id: str) -> Row | None:
-    """Cheapest ADJACENT_TO route to an inspection point. Query: robot/route_to_inspection_point."""
-    raise NotImplementedError("TODO(siddharth): route_to_inspection_point (Milestone 3)")
+    """Cheapest ADJACENT_TO route (algo.SPpaths): {locations, waypoints, cost}; None if unreachable."""
+    params = {"robot_id": robot_id, "ip_id": inspection_point_id}
+    return _one(_run(graph, "robot/route_to_inspection_point", params, write=False))
 
 
-# --- impact (Milestone 2) ---------------------------------------------------------
+# --- impact ---------------------------------------------------------------------
 def affected_assets(graph: Graph, asset_id: str) -> list[Row]:
-    """Assets downstream of `asset_id` (multi-hop). Query: impact/affected_assets."""
-    raise NotImplementedError("TODO(siddharth): affected_assets (Milestone 2)")
+    """Assets downstream of `asset_id` along FEEDS, with hop distance."""
+    return _run(graph, "impact/affected_assets", {"asset_id": asset_id}, write=False)
 
 
-def alternate_supplies(graph: Graph, asset_id: str) -> list[Row]:
-    """Supplies that can physically reach `asset_id`. Query: impact/alternate_supplies."""
-    raise NotImplementedError("TODO(siddharth): alternate_supplies (Milestone 2)")
+def upstream_assets(graph: Graph, asset_id: str) -> list[Row]:
+    """Assets `asset_id` depends on upstream along FEEDS, nearest first."""
+    return _run(graph, "impact/upstream_assets", {"asset_id": asset_id}, write=False)
+
+
+def alternate_supplies(
+    graph: Graph, asset_id: str, exclude_supply_id: str | None = None
+) -> list[Row]:
+    """Supplies with a FEEDS path to `asset_id` (+ valves on the path). Reachability, not sufficiency."""
+    params = {"asset_id": asset_id, "exclude_supply_id": exclude_supply_id}
+    return _run(graph, "impact/alternate_supplies", params, write=False)
 
 
 def critical_services_affected(graph: Graph, asset_id: str) -> list[Row]:
-    """Critical services lost if `asset_id` stops. Query: impact/critical_services_affected."""
-    raise NotImplementedError("TODO(siddharth): critical_services_affected (Milestone 2)")
+    """Critical services provided by machines downstream of `asset_id`."""
+    return _run(graph, "impact/critical_services_affected", {"asset_id": asset_id}, write=False)
 
 
-# --- hypotheses (Milestone 3) -----------------------------------------------------
+def downstream_machines(graph: Graph, asset_id: str) -> list[Row]:
+    """Machines fed by `asset_id`, with demand and criticality."""
+    return _run(graph, "impact/downstream_machines", {"asset_id": asset_id}, write=False)
+
+
+# --- hypotheses -----------------------------------------------------------------
+def instantiate_hypotheses(graph: Graph, incident_id: str) -> int:
+    """Create the incident's open Hypotheses from the scenario's templates; return how many."""
+    rows = _run(
+        graph, "hypotheses/instantiate_hypotheses", {"incident_id": incident_id}, write=True
+    )
+    return int(rows[0]["n"]) if rows else 0
+
+
 def open_hypotheses(graph: Graph, incident_id: str) -> list[Row]:
-    """Hypotheses not yet resolved for an incident. Query: hypotheses/open_hypotheses."""
-    raise NotImplementedError("TODO(siddharth): open_hypotheses (Milestone 3)")
+    """Open hypotheses with supporting / contradicting observation counts."""
+    return _run(graph, "hypotheses/open_hypotheses", {"incident_id": incident_id}, write=False)
 
 
 def distinguishing_inspections(graph: Graph, incident_id: str) -> list[Row]:
-    """Inspection points that discriminate between open hypotheses."""
-    raise NotImplementedError("TODO(siddharth): distinguishing_inspections (Milestone 3)")
+    """Inspection points that discriminate between open hypotheses, most discriminating first."""
+    params = {"incident_id": incident_id}
+    return _run(graph, "hypotheses/distinguishing_inspections", params, write=False)
+
+
+def hypothesis_expectations(graph: Graph, incident_id: str, asset_id: str, prop: str) -> list[Row]:
+    """Open hypotheses that predict a value for (asset, property): {hypothesis_id, op, value}."""
+    params = {"incident_id": incident_id, "asset_id": asset_id, "property": prop}
+    return _run(graph, "hypotheses/hypothesis_expectations", params, write=False)
+
+
+def record_hypothesis_evidence(
+    graph: Graph, observation_id: str, hypothesis_id: str, supports: bool, rule: str
+) -> str:
+    """Create SUPPORTS or CONTRADICTS (contradicted -> 'rejected'); return the hypothesis status."""
+    params = {
+        "observation_id": observation_id,
+        "hypothesis_id": hypothesis_id,
+        "supports": supports,
+        "rule": rule,
+    }
+    rows = _run(graph, "hypotheses/record_hypothesis_evidence", params, write=True)
+    return rows[0]["status"] if rows else "unknown"
 
 
 # --- provenance -----------------------------------------------------------------

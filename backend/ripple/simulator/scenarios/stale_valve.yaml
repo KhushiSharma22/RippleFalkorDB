@@ -1,2 +1,7 @@
-# Scenario: stale_valve — Recorded bypass-valve position is stale.
-# TODO(siddharth): define schema (known graph facts vs. hidden truth) and fill in.
+# Scenario: stale_valve — an hour-old log says the bypass valve is open; it is actually closed.
+# Tests evidence freshness: Ripple must not trust the stale record (D-012/D-013).
+name: stale_valve
+description: Stale log claims bypass open; truth is closed.
+extends: healthy_8
+extra_observations:
+  - {id: obs_bypass_log, about: bypass, property: position, value: open, observed_at: -3600.0, quality: 0.7, source: log}

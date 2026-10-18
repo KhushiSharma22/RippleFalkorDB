@@ -105,6 +105,12 @@
 `-[:DURING]->(:Incident)`, `-[:VERIFIED_BY]->(:Observation)`; `StateRevision` is a singleton
 `{id: 'current', n, at}` incremented by every `insert_observation` (Decisions will record `n`).
 
+**Milestone 2–3 additions:** `HypothesisTemplate {id, name}` (scenario data) with
+`-[:EXPECTS {property, op, value}]->(:Asset)` and `-[:DISTINGUISHED_BY]->(:InspectionPoint)`; instantiated per incident
+as `(:Incident)-[:HAS_HYPOTHESIS]->(:Hypothesis {id, template, name, status})` with copied edges. New inspection
+points `ip_primary_pump` (primary health), `ip_main_valve` (main valve position), `ip_machine_b` (machine B running);
+standby pump also INSPECTS `running`. New condition `c_primary_failed` on `isolate_primary`.
+
 **Changes vs CLAUDE.md §6 draft:** `InspectionPoint` is its own label (DP3); added `AT`, `MEASURES`, `EXECUTES`, `HAS_HYPOTHESIS`; dropped `REQUIRES_SERVICE` and `HAS_CAPABILITY` for v1 (machine cooling demand is a property; one robot with fixed capabilities; add back if multi-capability inspection matters).
 
 ## Facility instance (scenario baseline)
