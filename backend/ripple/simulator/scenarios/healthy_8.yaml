@@ -1,2 +1,112 @@
-# Scenario: healthy_8 — Standby healthy with 8 units.
-# TODO(siddharth): define schema (known graph facts vs. hidden truth) and fill in.
+# Scenario: healthy_8 — primary supply fails; standby is healthy with 8 units (both machines can stay up).
+# Numbers are synthetic simulation assumptions (docs/proposal.md §3).
+#
+# graph:  what Ripple is ALLOWED to know. Seeded into FalkorDB by ripple.graph.seed.
+# truth:  HIDDEN ground truth. Read ONLY by ripple.simulator.ground_truth (invariant #2).
+
+name: healthy_8
+description: Primary supply fails; standby healthy at 8 units.
+
+graph:
+  nodes:
+    # --- locations (x, y in metres; used by the robot adapter, D-005)
+    - {labels: [Location], id: dock, name: Dock, x: 0.0, y: 0.0}
+    - {labels: [Location], id: primary_bay, name: Primary bay, x: 2.0, y: 2.0}
+    - {labels: [Location], id: standby_bay, name: Standby bay, x: 2.0, y: -2.0}
+    - {labels: [Location], id: header_room, name: Header room, x: 4.0, y: 0.0}
+    - {labels: [Location], id: machine_hall, name: Machine hall, x: 6.0, y: 0.0}
+
+    # --- assets (static design facts only; changing state is evidence, DP1)
+    - {labels: [Asset, Supply], id: primary_supply, name: Primary supply, nominal_capacity: 8}
+    - {labels: [Asset, Supply], id: standby_supply, name: Standby supply, nominal_capacity: 8}
+    - {labels: [Asset, Valve], id: main_isolation, name: Main isolation valve, normally: open}
+    - {labels: [Asset, Valve], id: bypass, name: Bypass valve, normally: closed}
+    - {labels: [Asset, Header], id: cooling_header, name: Cooling header}
+    - {labels: [Asset, Machine], id: machine_a, name: Machine A, demand: 4, criticality: critical}
+    - {labels: [Asset, Machine], id: machine_b, name: Machine B, demand: 3, criticality: low}
+
+    # --- services
+    - {labels: [Service], id: line_a, name: Line A production, critical: true}
+    - {labels: [Service], id: line_b, name: Line B production, critical: false}
+
+    # --- inspection, sensing, robot
+    - {labels: [InspectionPoint], id: ip_standby_pump, name: Standby pump gauge}
+    - {labels: [InspectionPoint], id: ip_bypass_valve, name: Bypass valve indicator}
+    - {labels: [InspectionPoint], id: ip_header_flow, name: Header flow meter}
+    - {labels: [Sensor], id: temp_a, kind: temperature}
+    - {labels: [Robot], id: robot_1, name: Inspector}
+
+    # --- actions and their prerequisite conditions
+    - {labels: [Action], id: activate_standby, name: Activate standby supply, kind: supply}
+    - {labels: [Action], id: open_bypass, name: Open bypass valve, kind: valve}
+    - {labels: [Action], id: isolate_primary, name: Isolate primary supply, kind: valve}
+    - {labels: [Condition], id: c_standby_healthy, property: health, op: "=", value: ok, kind: evidence}
+    - {labels: [Condition], id: c_bypass_open, property: position, op: "=", value: open, kind: evidence}
+    - {labels: [Condition], id: c_capacity_ok, kind: computed, check: demand_within_capacity}
+
+  relationships:
+    # --- robot access
+    - {type: ADJACENT_TO, from: dock, to: primary_bay, cost: 10}
+    - {type: ADJACENT_TO, from: dock, to: standby_bay, cost: 10}
+    - {type: ADJACENT_TO, from: primary_bay, to: header_room, cost: 8}
+    - {type: ADJACENT_TO, from: standby_bay, to: header_room, cost: 8}
+    - {type: ADJACENT_TO, from: header_room, to: machine_hall, cost: 6}
+    - {type: AT, from: robot_1, to: dock, since: 0.0}
+
+    # --- operational flow (directed, non-return assumed) and physical pipes (DP2)
+    - {type: FEEDS, from: primary_supply, to: main_isolation}
+    - {type: FEEDS, from: main_isolation, to: cooling_header}
+    - {type: FEEDS, from: standby_supply, to: bypass}
+    - {type: FEEDS, from: bypass, to: cooling_header}
+    - {type: FEEDS, from: cooling_header, to: machine_a}
+    - {type: FEEDS, from: cooling_header, to: machine_b}
+    - {type: CONNECTED_TO, from: primary_supply, to: main_isolation}
+    - {type: CONNECTED_TO, from: main_isolation, to: cooling_header}
+    - {type: CONNECTED_TO, from: standby_supply, to: bypass}
+    - {type: CONNECTED_TO, from: bypass, to: cooling_header}
+    - {type: CONNECTED_TO, from: cooling_header, to: machine_a}
+    - {type: CONNECTED_TO, from: cooling_header, to: machine_b}
+
+    # --- placement
+    - {type: LOCATED_IN, from: primary_supply, to: primary_bay}
+    - {type: LOCATED_IN, from: main_isolation, to: primary_bay}
+    - {type: LOCATED_IN, from: standby_supply, to: standby_bay}
+    - {type: LOCATED_IN, from: bypass, to: standby_bay}
+    - {type: LOCATED_IN, from: cooling_header, to: header_room}
+    - {type: LOCATED_IN, from: machine_a, to: machine_hall}
+    - {type: LOCATED_IN, from: machine_b, to: machine_hall}
+    - {type: LOCATED_IN, from: ip_standby_pump, to: standby_bay}
+    - {type: LOCATED_IN, from: ip_bypass_valve, to: standby_bay}
+    - {type: LOCATED_IN, from: ip_header_flow, to: header_room}
+    - {type: LOCATED_IN, from: temp_a, to: machine_hall}
+
+    # --- services, inspection coverage, sensing
+    - {type: PROVIDES_SERVICE, from: machine_a, to: line_a}
+    - {type: PROVIDES_SERVICE, from: machine_b, to: line_b}
+    - {type: INSPECTS, from: ip_standby_pump, to: standby_supply, property: health}
+    - {type: INSPECTS, from: ip_standby_pump, to: standby_supply, property: capacity}
+    - {type: INSPECTS, from: ip_bypass_valve, to: bypass, property: position}
+    - {type: INSPECTS, from: ip_header_flow, to: cooling_header, property: flow}
+    - {type: MEASURES, from: temp_a, to: machine_a, property: temperature}
+
+    # --- action prerequisites and declared effects
+    - {type: REQUIRES, from: activate_standby, to: c_standby_healthy}
+    - {type: CONDITION_ON, from: c_standby_healthy, to: standby_supply}
+    - {type: REQUIRES, from: isolate_primary, to: c_bypass_open}
+    - {type: CONDITION_ON, from: c_bypass_open, to: bypass}
+    - {type: REQUIRES, from: isolate_primary, to: c_capacity_ok}
+    - {type: CONDITION_ON, from: c_capacity_ok, to: cooling_header}
+    - {type: AFFECTS, from: activate_standby, to: standby_supply, property: running, value: true}
+    - {type: AFFECTS, from: open_bypass, to: bypass, property: position, value: open}
+    - {type: AFFECTS, from: isolate_primary, to: main_isolation, property: position, value: closed}
+
+  # Prior evidence known before the incident (seeded in Step 1.2 via insert_observation, not in 1.1).
+  observations:
+    - {id: obs_standby_log, about: standby_supply, property: capacity, value: 8, unit: units,
+       observed_at: -86400.0, quality: 0.6, source: log}
+
+truth:
+  primary_supply: {health: failed, capacity: 0}
+  standby_supply: {health: ok, capacity: 8}
+  main_isolation: {position: open}
+  bypass: {position: closed}

@@ -70,3 +70,15 @@
 - **Context:** `.venv` lives under iCloud-synced `~/Documents`; macOS flags `_editable_impl_ripple.pth` as hidden and
   Python skips hidden `.pth` files, so `python scripts/x.py` can't import `ripple`.
 - **Decision:** invoke scripts with `-m` from `backend/` (adds cwd to `sys.path`). Alternative: move repo out of iCloud.
+
+## D-010 — Seeding Cypher: two template files + label/type whitelist
+- **Context:** FalkorDB can't parameterise labels or relationship types (`SET n:$(x)` is a syntax error, verified).
+- **Options:** one `.cypher` per label/type (~20 files); inline f-strings in seed.py; two templates with whitelist.
+- **Decision (Siddharth):** `queries/seed/create_nodes.cypher` + `create_relationships.cypher` with `{labels}`/`{type}`
+  placeholders, filled only from a whitelist derived from graph-model.md; values always passed as `$rows`.
+- **Why:** Cypher stays auditable in files (D-003); whitelist prevents injection; batching via UNWIND.
+
+## D-011 — Seed clears via graph delete, then ensure_schema
+- **Decision (Siddharth):** `graph.delete()` (tolerating "empty key"), then idempotent `ensure_schema`, then nodes, then relationships.
+- **Why:** truly clean slate; FalkorDB errors on re-creating an existing index ("already indexed", verified), so ensure_schema must tolerate it anyway.
+- **Scenario files:** one YAML per scenario with `graph:` (known, seeded) and `truth:` (hidden, simulator only).
