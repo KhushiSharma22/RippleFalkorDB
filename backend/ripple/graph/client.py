@@ -1,15 +1,18 @@
-"""FalkorDB connection and graph selection."""
-
+from functools import lru_cache
+from ripple.config import get_settings
 from falkordb import FalkorDB, Graph
 
-from ripple.config import Settings
+@lru_cache(maxsize=1)
 
+def get_db() -> FalkorDB:
 
-def get_db(settings: Settings) -> FalkorDB:
-    """Return a connected FalkorDB client for settings.falkordb_host/port."""
-    raise NotImplementedError("TODO(siddharth): connect to FalkorDB")
+    settings = get_settings()
 
+    return FalkorDB(
+        host=settings.falkordb_host,
+        port=settings.falkordb_port,
+    )
 
 def get_graph(db: FalkorDB, name: str) -> Graph:
-    """Select a graph by name (main graph or a branch created by branching.py)."""
-    raise NotImplementedError("TODO(siddharth): select graph")
+    return db.select_graph(name)
+

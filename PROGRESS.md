@@ -1,7 +1,7 @@
 # Progress
 
 ## Current step
-**0.1 — Scaffold + FalkorDB round-trip.** Scaffold done; round-trip pending.
+**0.3 — RobotAdapter Protocol + MockRobotAdapter.**
 
 ## Log
 
@@ -16,3 +16,17 @@
   - Cyberwave SDK package name/capabilities unknown until 0.2.
   - Graph-viz library choice deferred to Milestone 5.
 - **Next:** `docker compose up`, implement `graph/client.py`, round-trip one node from Python.
+
+### 2026-10-17 — Session 2
+- **Done (0.1):** Docker Desktop + FalkorDB up; uv installed, `uv sync` OK. `graph/client.py`
+  (`get_db` cached shared client, `get_graph`), conftest fixtures (session ping that fails loudly;
+  per-test `test_<name>_<hex>` graph with tolerant teardown), `test_asset_round_trip`.
+- **Tested:** `uv run pytest -m integration` → 1 passed; no leftover graphs.
+- **Open:** explain-back answers for 0.1 owed; fail-first run not confirmed.
+- **Next:** 0.2 Cyberwave proof.
+- **0.2 in progress:** SDK read (v0.7.3); decisions D-004 (credit budget), D-005 (open-loop + verify, coords in graph). Proof script pending run.
+- **0.2 result:** blocked: playground accepts commands but robot doesn't move and no pose returns (D-006).
+  Scripts: `backend/scripts/cyberwave_proof.py`, `list_assets.py`. Action: ask Cyberwave team.
+- **0.2 DONE:** reposition proof passes (D-007): before (0,0) → after (1.5,-0.5) via independent REST readback.
+  Locomotion unresolved (D-006) — question for Cyberwave team.
+- **Next:** 0.3 RobotAdapter Protocol + MockRobotAdapter.

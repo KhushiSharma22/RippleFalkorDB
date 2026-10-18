@@ -11,3 +11,8 @@ UI components, evaluation) is written by Siddharth.
 | 2026-10-15 | `.gitignore`, `docker-compose.yml`, `.env.example`, `backend/pyproject.toml`, `frontend/{package.json,tsconfig.json,vite.config.ts,index.html,src/main.tsx,src/App.tsx}`, `backend/ripple/config.py` | boilerplate | Chose stack defaults (uv, Py 3.12, Claude, minimal frontend). |
 | 2026-10-15 | All `backend/ripple/**.py` stubs, `.cypher` headers, scenario/eval YAML placeholders, `tests/` skips | scaffold (stubs only, `NotImplementedError` bodies) | To implement. |
 | 2026-10-15 | `PROGRESS.md`, `docs/decisions.md` | process docs | — |
+| 2026-10-17 | `graph/client.py` (`get_db`, `get_graph`), `tests/conftest.py` (`db`, `graph` fixtures), `tests/integration/test_roundtrip.py` | fuller snippet (`unblock me`, line-by-line) | Designed: shared client, test-graph naming/isolation, fail-loud on unreachable DB. Typed code from chat; integration test passes (fail-first run not confirmed). |
+| 2026-10-17 | `backend/scripts/cyberwave_proof.py` | fuller snippet (full throwaway proof script; SDK live-view snapshot gotcha found in SDK source) | Typed + ran; measuring credit cost. |
+| 2026-10-17 | `backend/scripts/list_assets.py`; proof-script edits (UUID lookup, nudge, twin reuse) | snippet (debugging, SDK source read by AI) | Typed + ran; observed robot in browser. |
+| 2026-10-17 | `backend/scripts/list_twins.py` | snippet (diagnostic) | Typed + ran; compared twin IDs with browser. |
+| 2026-10-17 | `backend/scripts/cyberwave_reposition_proof.py`; `affect("sim")` edits | fuller snippet (proof script; SDK source traced by AI) | Typed + ran; proof passed; supplied environment id; tested keyboard teleop in browser. |
