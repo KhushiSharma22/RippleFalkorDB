@@ -1,7 +1,7 @@
 # Progress
 
 ## Current step
-**Milestone 1 — vertical slice** (Milestone 0 complete).
+**Milestone 1 — vertical slice: code complete; Siddharth pastes 12 queries, then tests go green.**
 
 ## Log
 
@@ -37,3 +37,10 @@
   (27 nodes / 51 rels in `model_preview`; impact + robot-location queries return expected rows).
 - **0.4 DONE:** DP1–DP5 accepted (D-008).
 - **Next:** Milestone 1 vertical slice.
+
+- **1.1 DONE:** seed from scenario YAML (templates + whitelist), `ensure_schema`, seed tests.
+- **Milestone 1 code (AI-written on request):** scenario loader with `extends`, evidence models + freshness,
+  repository (12 runtime queries), simulator (ground truth, header flow, controls, location-gated sensors),
+  validator `check_action`, orchestrator vertical slice, architecture tests, scenario tests (D-012).
+- **Tested:** with the completed queries (verification overlay) → 24 passed. In-repo `.cypher` bodies pending.
+- **Next:** paste queries → `uv run pytest` green → Milestone 2 (impact queries, capacity check).

@@ -1,2 +1,6 @@
-# Scenario: healthy_5 — Standby healthy with 5 units.
-# TODO(siddharth): define schema (known graph facts vs. hidden truth) and fill in.
+# Scenario: healthy_5 — standby healthy but only 5 units (needs load reduction; capacity check is Milestone 2).
+name: healthy_5
+description: Primary supply fails; standby healthy at 5 units.
+extends: healthy_8
+truth:
+  standby_supply: {capacity: 5}

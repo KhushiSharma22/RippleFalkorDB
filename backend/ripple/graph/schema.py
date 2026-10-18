@@ -16,6 +16,9 @@ INDEXES: list[tuple[str, str]] = [
     ("Condition", "id"),
     ("Robot", "id"),
     ("Observation", "property"),
+    ("Observation", "id"),
+    ("Incident", "id"),
+    ("ExecutionAttempt", "id"),
 ]
 
 

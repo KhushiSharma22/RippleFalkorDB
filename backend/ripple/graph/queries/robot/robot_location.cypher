@@ -1,6 +1,6 @@
-// Purpose:    The robot's current Location.
-// Parameters: TODO(siddharth)
-// Returns:    TODO(siddharth)
+// Purpose:    The robot's current verified Location (DP4).
+// Parameters: $robot_id
+// Returns:    location_id, x, y (0 or 1 row)
 // Used by:    ripple.graph.repository.robot_location
-//
-// TODO(siddharth): write the query.
+MATCH (:Robot {id: $robot_id})-[:AT]->(l:Location)
+RETURN l.id AS location_id, l.x AS x, l.y AS y

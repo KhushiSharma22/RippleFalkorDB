@@ -12,12 +12,14 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-import yaml
 from falkordb import Graph
 from redis.exceptions import ResponseError
 
+from ripple.evidence.models import Observation
+from ripple.graph import repository
 from ripple.graph.query_loader import load_query
 from ripple.graph.schema import ensure_schema
+from ripple.scenario import load_scenario
 
 # Allowed label sets and relationship types: mirrors docs/graph-model.md v1.
 NODE_LABELS: set[tuple[str, ...]] = {
@@ -51,10 +53,12 @@ REL_TYPES: set[str] = {
 def seed_from_scenario(graph: Graph, scenario_path: Path) -> dict[str, int]:
     """Clear `graph`, create schema, then batch-create the scenario's nodes and relationships.
 
-    Returns {"nodes": n, "relationships": m} as reported by FalkorDB.
+    Prior observations (`graph.observations`) are inserted through repository.insert_observation.
+    Returns {"nodes": n, "relationships": m, "observations": k}; node/relationship counts cover the
+    topology templates only.
     Raises ValueError for a label set or relationship type outside the whitelist.
     """
-    spec = yaml.safe_load(Path(scenario_path).read_text())["graph"]
+    spec = load_scenario(scenario_path)["graph"]
 
     try:
         graph.delete()
@@ -92,4 +96,9 @@ def seed_from_scenario(graph: Graph, scenario_path: Path) -> dict[str, int]:
         query = rel_template.replace("{type}", rel_type)
         n_rels += int(graph.query(query, {"rows": rows}).relationships_created)
 
-    return {"nodes": n_nodes, "relationships": n_rels}
+    observations = spec.get("observations", [])
+    for row in observations:
+        fields = {k: v for k, v in row.items() if k != "about"}
+        repository.insert_observation(graph, Observation(asset_id=row["about"], **fields))
+
+    return {"nodes": n_nodes, "relationships": n_rels, "observations": len(observations)}

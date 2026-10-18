@@ -100,6 +100,11 @@
 | `RESULTED_IN` | `PlanStep → ExecutionAttempt` | |
 | `VERIFIED_BY` | `ExecutionAttempt → Observation` | |
 
+**Milestone 1 additions:** `(:Incident)-[:CONCERNS]->(:Asset)` (alarming asset);
+`(:ExecutionAttempt {asset_id, property, expected, sent_at, ack_at, status})-[:ATTEMPTS]->(:Action)`,
+`-[:DURING]->(:Incident)`, `-[:VERIFIED_BY]->(:Observation)`; `StateRevision` is a singleton
+`{id: 'current', n, at}` incremented by every `insert_observation` (Decisions will record `n`).
+
 **Changes vs CLAUDE.md §6 draft:** `InspectionPoint` is its own label (DP3); added `AT`, `MEASURES`, `EXECUTES`, `HAS_HYPOTHESIS`; dropped `REQUIRES_SERVICE` and `HAS_CAPABILITY` for v1 (machine cooling demand is a property; one robot with fixed capabilities; add back if multi-capability inspection matters).
 
 ## Facility instance (scenario baseline)

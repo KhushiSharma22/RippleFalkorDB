@@ -1,2 +1,8 @@
-# Scenario: standby_down — Standby unavailable.
-# TODO(siddharth): define schema (known graph facts vs. hidden truth) and fill in.
+# Scenario: standby_down — primary fails AND the standby pump has failed.
+# Same facility graph as healthy_8; only the hidden truth differs, so any change in Ripple's
+# chosen action comes from what the robot observes, not from different code or topology.
+name: standby_down
+description: Primary supply fails; standby pump failed (unavailable).
+extends: healthy_8
+truth:
+  standby_supply: {health: failed, capacity: 0}

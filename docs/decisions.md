@@ -82,3 +82,20 @@
 - **Decision (Siddharth):** `graph.delete()` (tolerating "empty key"), then idempotent `ensure_schema`, then nodes, then relationships.
 - **Why:** truly clean slate; FalkorDB errors on re-creating an existing index ("already indexed", verified), so ensure_schema must tolerate it anyway.
 - **Scenario files:** one YAML per scenario with `graph:` (known, seeded) and `truth:` (hidden, simulator only).
+
+## D-012 — Milestone 1 vertical-slice design
+- **Candidates:** fixed ordered list in `agent/orchestrator.py` (`restore_via_standby` → `shed_noncritical_load`).
+  Honest scope: M1 proves "observation changes the action"; graph-driven candidates + branch evaluation come in M3/M4.
+- **Graph-driven parts:** prerequisites (`REQUIRES/CONDITION_ON`), where to inspect (`INSPECTS/LOCATED_IN`),
+  coordinates (`Location.x/y`), robot location (`AT`), declared effects (`AFFECTS`) — all via repository queries.
+- **Hidden truth isolation:** orchestrator receives `sense(ip_id)` and `actuate(asset, prop, value)` callables;
+  only the scenario runner wires them to `simulator.sensors` / `simulator.controls`. AST test enforces no
+  `ripple.simulator` imports from agent/planning/evidence.
+- **Location gate in Cypher:** `robot/inspection_targets` returns rows only if the robot is AT the IP's location.
+- **Execution:** each effect → `ExecutionAttempt` (sent) → ack (acked) → re-inspect → `VERIFIED_BY` observation
+  (verified/failed). A stuck valve is acked but fails verification (test).
+- **Validator:** missing/stale evidence → `missing` list (robot inspects); fresh violating evidence → hard reject;
+  `computed` conditions (capacity) are rejected as not-yet-implemented until M2.
+- **Scenarios:** `extends:` lets `standby_down` / `healthy_5` reuse the healthy_8 graph and change only `truth:`,
+  so differences in behaviour come from observations, not topology or code.
+- **Freshness windows (synthetic):** position/running 120 s, flow/temperature 60 s, health/capacity 600 s.

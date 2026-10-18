@@ -54,3 +54,20 @@ A: The robot's verified position is an edge, `(:Robot)-[:AT]->(:Location)`. A re
 
 **Q: How do you prove the graph matters (the "remove FalkorDB" test)?**
 A: Topology, dependencies, prerequisites, evidence and robot access all come only from Cypher queries in `graph/queries/`, and there's no in-memory mirror. Remove FalkorDB and the planner has no topology, the validator has no prerequisites, and the robot has no locations. The planned topology-change test adds a new load to the graph without code changes and shows the chosen intervention changing.
+
+## Milestone 1: vertical slice
+
+**Q: Show me that the robot's observation changes the decision.**
+A: `healthy_8` and `standby_down` share the exact same graph and code; only the hidden truth differs. In both, the validator finds no standby health evidence (`activate_standby REQUIRES c_standby_healthy CONDITION_ON standby_supply`), so the robot drives to `ip_standby_pump` and reads it. Healthy gives `restore_via_standby`; failed gives `shed_noncritical_load`. Test: `test_observation_is_what_changes_the_decision`.
+
+**Q: How do you stop the agent from cheating by reading the simulator's truth?**
+A: Three layers. (1) The orchestrator never imports the simulator: it gets `sense` and `actuate` callables, and an AST test fails the build if agent/planning/evidence import `ripple.simulator`. (2) `sensors.read` is the only path from truth to evidence, and it's location-gated *in Cypher*: `inspection_targets` returns rows only if `(robot)-[:AT]->(loc)<-[:LOCATED_IN]-(ip)`. (3) The `AT` edge moves only after pose readback confirms arrival.
+
+**Q: What's the difference between an ack and success?**
+A: Every effect creates an `ExecutionAttempt` (status `sent`), the controller's ack sets `acked`, and only a fresh observation from re-inspection sets `verified` or `failed` via `VERIFIED_BY`. Test `test_stuck_valve_is_caught_by_verification_not_by_ack`: the bypass is stuck, the command is acked, but the observation shows it still closed, so the attempt fails and recovery isn't claimed.
+
+**Q: Why does `latest_observation` define "current state"?**
+A: DP1: state lives only in Observations. The query takes the newest Observation ABOUT the asset for that property (`ORDER BY observed_at DESC LIMIT 1`). The validator then applies per-property freshness: a day-old log is "stale", so it triggers an inspection instead of being trusted.
+
+**Q: Your candidate plans are a hardcoded list. Isn't that the opposite of graph-driven?**
+A: For M1, yes, and we say so (D-012). M1 proves one thing: evidence changes the action. Everything the decision *depends on* already comes from the graph: prerequisites, inspection locations, coordinates, robot position, effects. Graph-driven candidates, multi-hop impact and `GRAPH.COPY` branch evaluation replace the list in M2–M4.

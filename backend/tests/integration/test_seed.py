@@ -5,7 +5,7 @@ import pytest
 from ripple.graph.seed import seed_from_scenario
 
 SCENARIOS = Path(__file__).resolve().parents[2] / "ripple" / "simulator" / "scenarios"
-EXPECTED = {"nodes": 25, "relationships": 45}
+EXPECTED = {"nodes": 27, "relationships": 49, "observations": 1}
 
 
 @pytest.mark.integration
